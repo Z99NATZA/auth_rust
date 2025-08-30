@@ -1,0 +1,28 @@
+[package]
+name = "authrsv1"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = "0.8.4"
+tokio = { version = "1", features = ["full"]}
+serde_json = "1"
+dotenv = "0.15"
+thiserror = "2.0.12"
+serde = { version = "1", features = ["derive"]}
+tower-http = { version = "0.6.4", features = ["cors"]}
+chrono = { version = "0.4", features = ["serde"]}
+uuid = { version = "1", features = ["v4"] }
+
+[dependencies.sqlx]
+version = "0.8.4"
+features = [
+    "runtime-tokio-native-tls", 
+    "postgres", 
+    "macros", 
+    "chrono", 
+    "time",
+    "uuid",
+]
+
+

@@ -12,8 +12,9 @@ thiserror = "2.0.12"
 serde = { version = "1", features = ["derive"]}
 tower-http = { version = "0.6.4", features = ["cors"]}
 chrono = { version = "0.4", features = ["serde"]}
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 argon2 = { version = "0.5", features = ["std"]}
+jsonwebtoken = "9"
 
 [dependencies.sqlx]
 version = "0.8.4"

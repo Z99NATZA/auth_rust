@@ -8,7 +8,6 @@ use thiserror::Error;
 use serde_json::json;
 use sqlx::Error as SqlxError;
 
-
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("Env variable error: {0}")]
@@ -20,16 +19,16 @@ pub enum AppError {
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
 
-    #[error("Something went wrong: {0}")]
+    #[error("Internal server error")]
     InternalError(String),
 
-    #[error("NotFound: {0}")]
-    NotFound(String),
+    #[error("Not Found")]
+    NotFound,
 
     #[error("JSON decode error: {0}")]
     JsonError(#[from] serde_json::Error),
     
-    #[error("Bad request: {0}")]
+    #[error("Bad request")]
     BadRequest(String),
 
     #[error("SQLx error: {0}")]
@@ -37,6 +36,12 @@ pub enum AppError {
 
     #[error("Argon2 error: {0}")]
     Argon2Error(#[from] argon2::password_hash::Error),
+
+    #[error("Unauthorized")]
+    Unauthorized,
+
+    #[error(transparent)]
+    JwtError(#[from] jsonwebtoken::errors::Error),
 }
 
 impl IntoResponse for AppError {
@@ -44,13 +49,17 @@ impl IntoResponse for AppError {
         let (status, message): (StatusCode, String) = match self {
             AppError::EnvVarError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             AppError::DotenvError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            AppError::InternalError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e),
+            AppError::InternalError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             AppError::IoError(e) => (StatusCode::BAD_GATEWAY, e.to_string()),
-            AppError::NotFound(e) => (StatusCode::NOT_FOUND, e),
+            AppError::NotFound => (StatusCode::NOT_FOUND, "Not found".to_string()),
             AppError::JsonError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            AppError::BadRequest(e) => (StatusCode::BAD_REQUEST, e),
+            AppError::BadRequest(e) => (StatusCode::BAD_REQUEST, e.to_string()),
             AppError::SqlxError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             AppError::Argon2Error(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()),
+            AppError::JwtError(e) => {
+                (StatusCode::UNAUTHORIZED, e.to_string())
+            }
         };
 
         let body = Json(json!({

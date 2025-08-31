@@ -3,7 +3,7 @@ use argon2::password_hash::{SaltString, PasswordHash, rand_core::OsRng};
 
 #[tokio::test]
 #[ignore]
-async fn verify_password_smoke() {
+async fn test_verify_password() {
     let password = b"password";
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();

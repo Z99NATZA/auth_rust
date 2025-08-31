@@ -32,8 +32,11 @@ pub enum AppError {
     #[error("Bad request: {0}")]
     BadRequest(String),
 
-    #[error("SQLx Error: {0}")]
+    #[error("SQLx error: {0}")]
     SqlxError(#[from] SqlxError),
+
+    #[error("Argon2 error: {0}")]
+    Argon2Error(#[from] argon2::password_hash::Error),
 }
 
 impl IntoResponse for AppError {
@@ -46,7 +49,8 @@ impl IntoResponse for AppError {
             AppError::NotFound(e) => (StatusCode::NOT_FOUND, e),
             AppError::JsonError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             AppError::BadRequest(e) => (StatusCode::BAD_REQUEST, e),
-            AppError::SqlxError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string())
+            AppError::SqlxError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::Argon2Error(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
         };
 
         let body = Json(json!({

@@ -1,5 +1,5 @@
 [package]
-name = "authrsv1"
+name = "authrs"
 version = "0.1.0"
 edition = "2024"
 
@@ -13,6 +13,7 @@ serde = { version = "1", features = ["derive"]}
 tower-http = { version = "0.6.4", features = ["cors"]}
 chrono = { version = "0.4", features = ["serde"]}
 uuid = { version = "1", features = ["v4"] }
+argon2 = { version = "0.5", features = ["std"]}
 
 [dependencies.sqlx]
 version = "0.8.4"

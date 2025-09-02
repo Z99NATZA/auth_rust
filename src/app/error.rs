@@ -40,6 +40,9 @@ pub enum AppError {
     #[error("Unauthorized")]
     Unauthorized,
 
+    #[error("Forbidden")]
+    Forbidden,
+
     #[error(transparent)]
     JwtError(#[from] jsonwebtoken::errors::Error),
 }
@@ -57,6 +60,7 @@ impl IntoResponse for AppError {
             AppError::SqlxError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             AppError::Argon2Error(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()),
+            AppError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden".to_string()),
             AppError::JwtError(e) => {
                 (StatusCode::UNAUTHORIZED, e.to_string())
             }

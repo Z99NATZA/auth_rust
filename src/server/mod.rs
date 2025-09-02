@@ -4,7 +4,7 @@ use tokio::signal;
 use crate::app::error::AppError;
 use crate::app::result::AppResult;
 use crate::app::state::AppState;
-use crate::routers::api;
+use crate::routers;
 
 pub async fn run() -> AppResult<()> {
     // -----------------------
@@ -43,7 +43,7 @@ pub async fn run() -> AppResult<()> {
         .parse()
         .map_err(|e| AppError::BadRequest(format!("invalid address: {e}")))?;
 
-    let app = api(state);
+    let app = routers::api(state);
     println!("App running on: {addr}");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;

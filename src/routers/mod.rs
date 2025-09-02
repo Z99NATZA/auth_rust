@@ -1,9 +1,11 @@
-use axum::{Router, http::{Method, header, HeaderValue}};
+use axum::{Router, http::{HeaderValue, Method, header}, middleware::{from_fn_with_state, from_fn}};
 use tower_http::cors::CorsLayer;
 use std::sync::Arc;
-use crate::app::state::AppState;
-use axum::routing::{post};
+use crate::{app::state::AppState, middleware::{auth::auth_mw, require_admin::require_admin}};
+use axum::routing::{post, get};
 use crate::controllers::auth::login;
+use crate::controllers::auth::me;
+use crate::controllers::users::core::list_users;
 
 pub fn api(state: Arc<AppState>) -> Router {
     let cors = CorsLayer::new()
@@ -12,8 +14,19 @@ pub fn api(state: Arc<AppState>) -> Router {
         .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, header::ACCEPT])
         .allow_credentials(true);
 
-    Router::<Arc<AppState>>::new()
-        .route("/api/auth/login", post(login::login))
+    let public = Router::new()
+        .route("/auth/login", post(login::login));
+
+    let admin = Router::new()
+        .route("/users", get(list_users))
+        .route_layer(from_fn(require_admin));
+
+    let authed = Router::new()
+        .route("/auth/me", get(me::me))
+        .nest("/api", admin)
+        .route_layer(from_fn_with_state(state.clone(), auth_mw));
+
+    public.merge(authed)
         .layer(cors)
         .with_state(state)
 } 

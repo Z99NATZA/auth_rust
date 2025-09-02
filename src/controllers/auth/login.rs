@@ -15,12 +15,12 @@ pub struct LoginRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Jwt {
-    sub: uuid::Uuid,
-    username: String,
-    role: String,
-    exp: usize,
-    iat: usize,
+pub struct Claims {
+    pub sub: uuid::Uuid,
+    pub username: String,
+    pub role: String,
+    pub exp: usize,
+    pub iat: usize,
 }
 
 #[derive(Debug, Serialize)]
@@ -42,7 +42,7 @@ pub async fn login(
     .await?
     .ok_or_else(|| AppError::NotFound)?;
 
-    if !user.is_active.unwrap_or(false) {
+    if !user.is_active.unwrap_or(false) { 
         return Err(AppError::Unauthorized);
     }
    
@@ -54,7 +54,7 @@ pub async fn login(
 
     let now = Utc::now();
     let exp = now + Duration::hours(2);
-    let jwt = Jwt {
+    let claims = Claims {
         sub: user.id,
         username: user.username,
         role: user.role.clone().unwrap_or_else(|| "user".to_string()),
@@ -64,7 +64,7 @@ pub async fn login(
 
     let token = encode(
         &Header::default(),
-        &jwt,
+        &claims,
         &EncodingKey::from_secret(state.jwt_secret.as_bytes()),
     )?;
 

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 axum = "0.8.4"
+axum-extra = { version = "0.10.1", features = ["typed-header"] }
 tokio = { version = "1", features = ["full"]}
 serde_json = "1"
 dotenv = "0.15"
@@ -15,6 +16,8 @@ chrono = { version = "0.4", features = ["serde"]}
 uuid = { version = "1", features = ["v4", "serde"] }
 argon2 = { version = "0.5", features = ["std"]}
 jsonwebtoken = "9"
+async-trait = "0.1"
+headers = "0.4"
 
 [dependencies.sqlx]
 version = "0.8.4"

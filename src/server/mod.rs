@@ -1,6 +1,5 @@
 use std::{env, net::SocketAddr, sync::Arc};
 use tokio::signal;
-
 use crate::app::error::AppError;
 use crate::app::result::AppResult;
 use crate::app::state::AppState;
@@ -15,7 +14,15 @@ pub async fn run() -> AppResult<()> {
     }
 
     let database_url = std::env::var("DATABASE_URL")?;
-    let jwt_secret = std::env::var("JWT_SECRET")?;
+    // let jwt_secret = std::env::var("JWT_SECRET")?;
+    
+    let jwt_secret = std::env::var("JWT_SECRET")
+        .map_err(|_| AppError::BadRequest("JWT_SECRET is not set".into()))?;
+
+    // แนะนำอย่างน้อย 32 ไบต์ขึ้นไป
+    if jwt_secret.len() < 32 {
+        eprintln!("WARNING: JWT_SECRET is too short (<32 bytes). Use a longer, random secret.");
+    }
 
     // -----------------------
     // เชื่อมต่อ Database

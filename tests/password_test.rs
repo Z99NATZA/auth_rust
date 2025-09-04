@@ -10,6 +10,7 @@ async fn test_verify_password() {
 
     // hash
     let password_hash = argon2.hash_password(password, &salt).unwrap().to_string();
+    eprintln!("{password_hash}");
 
     // parse กลับมาเป็น PasswordHash
     let parsed_hash = PasswordHash::new(&password_hash).unwrap();

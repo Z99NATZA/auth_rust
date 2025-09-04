@@ -19,6 +19,7 @@ jsonwebtoken = "9"
 async-trait = "0.1"
 headers = "0.4"
 sha2 = "0.10.9"
+base64 = "0.22.1"
 
 [dependencies.sqlx]
 version = "0.8.4"
@@ -27,7 +28,6 @@ features = [
     "postgres", 
     "macros", 
     "chrono", 
-    "time",
     "uuid",
 ]
 

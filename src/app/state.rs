@@ -7,7 +7,10 @@ use crate::app::result::AppResult;
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
-    pub jwt_secret: String,
+    pub jwt_secret: Vec<u8>,
+    pub jwt_issuer: String,
+    pub jwt_audience: String,
+    pub access_token_ttl: i64,
 }
 
 impl AppState {

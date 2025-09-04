@@ -45,6 +45,9 @@ pub enum AppError {
 
     #[error(transparent)]
     JwtError(#[from] jsonwebtoken::errors::Error),
+
+    #[error("Base64 decode error: {0}")]
+    Base64DecodeError(#[from] base64::DecodeError),
 }
 
 impl IntoResponse for AppError {
@@ -61,9 +64,10 @@ impl IntoResponse for AppError {
             AppError::Argon2Error(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden".to_string()),
+            AppError::Base64DecodeError(e) => (StatusCode::BAD_REQUEST, e.to_string()),
             AppError::JwtError(e) => {
                 (StatusCode::UNAUTHORIZED, e.to_string())
-            }
+            },
         };
 
         let body = Json(json!({

@@ -4,6 +4,8 @@ use crate::app::error::AppError;
 use crate::app::result::AppResult;
 use crate::app::state::AppState;
 use crate::routers;
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 
 pub async fn run() -> AppResult<()> {
     // -----------------------
@@ -13,16 +15,26 @@ pub async fn run() -> AppResult<()> {
         dotenv::dotenv()?;
     }
 
-    let database_url = std::env::var("DATABASE_URL")?;
-    // let jwt_secret = std::env::var("JWT_SECRET")?;
-    
-    let jwt_secret = std::env::var("JWT_SECRET")
-        .map_err(|_| AppError::BadRequest("JWT_SECRET is not set".into()))?;
+    let database_url = std::env::var("DATABASE_URL")
+        .map_err(|_| AppError::BadRequest("DATABASE_URL is not set".into()))?;
 
     // แนะนำอย่างน้อย 32 ไบต์ขึ้นไป
-    if jwt_secret.len() < 32 {
-        eprintln!("WARNING: JWT_SECRET is too short (<32 bytes). Use a longer, random secret.");
-    }
+    let jwt_secret_b64 = std::env::var("JWT_SECRET")
+        .map_err(|_| AppError::BadRequest("JWT_SECRET is not set".into()))?;
+
+    let jwt_secret = STANDARD.decode(jwt_secret_b64)?;
+
+    // issuer (ค่าเริ่มต้น "myapp")
+    let jwt_issuer = std::env::var("JWT_ISSUER").unwrap_or_else(|_| "myapp".into());
+
+    // audience (ค่าเริ่มต้น "myapp-client")
+    let jwt_audience = std::env::var("JWT_AUDIENCE").unwrap_or_else(|_| "myapp-client".into());
+
+    // access token TTL (วินาที) – ค่าเริ่มต้น 7200 = 2 ชั่วโมง
+    let access_token_ttl: i64 = std::env::var("ACCESS_TOKEN_TTL")
+        .unwrap_or_else(|_| "7200".into())
+        .parse()
+        .unwrap_or(7200);
 
     // -----------------------
     // เชื่อมต่อ Database
@@ -35,6 +47,9 @@ pub async fn run() -> AppResult<()> {
     let state = Arc::new(AppState {
         db,
         jwt_secret,
+        jwt_issuer,
+        jwt_audience,
+        access_token_ttl,
     });
   
     // -----------------------

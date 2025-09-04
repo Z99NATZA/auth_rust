@@ -1,7 +1,7 @@
 use axum::{Router, http::{HeaderValue, Method, header}, middleware::{from_fn_with_state, from_fn}};
 use tower_http::cors::CorsLayer;
 use std::sync::Arc;
-use crate::{app::state::AppState, middleware::{auth::auth_mw, require_admin::require_admin}};
+use crate::{app::state::AppState, middleware::{auth::auth_mw, require_role::require_role}};
 use axum::routing::{post, get};
 use crate::controllers::auth::login;
 use crate::controllers::auth::me;
@@ -19,7 +19,7 @@ pub fn api(state: Arc<AppState>) -> Router {
 
     let admin = Router::new()
         .route("/users", get(list_users))
-        .route_layer(from_fn(require_admin));
+        .route_layer(from_fn(require_role(&["admin"])));
 
     let authed = Router::new()
         .route("/auth/me", get(me::me))

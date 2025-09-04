@@ -1,2 +1,2 @@
 pub mod auth;
-pub mod require_admin;
+pub mod require_role;

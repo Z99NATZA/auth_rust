@@ -11,6 +11,7 @@ pub struct AppState {
     pub jwt_issuer: String,
     pub jwt_audience: String,
     pub access_token_ttl: i64,
+    pub refresh_secret: Vec<u8>,
 }
 
 impl AppState {

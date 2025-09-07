@@ -18,11 +18,15 @@ pub async fn run() -> AppResult<()> {
     let database_url = std::env::var("DATABASE_URL")
         .map_err(|_| AppError::BadRequest("DATABASE_URL is not set".into()))?;
 
-    // แนะนำอย่างน้อย 32 ไบต์ขึ้นไป
+    // jwt_secret
     let jwt_secret_b64 = std::env::var("JWT_SECRET")
         .map_err(|_| AppError::BadRequest("JWT_SECRET is not set".into()))?;
-
     let jwt_secret = STANDARD.decode(jwt_secret_b64)?;
+
+    // refresh_secret
+    let refresh_secret_b64 = std::env::var("REFRESH_SECRET")
+        .map_err(|_| AppError::BadRequest("REFRESH_SECRET is not set".into()))?;
+    let refresh_secret = STANDARD.decode(refresh_secret_b64)?;
 
     // issuer (ค่าเริ่มต้น "myapp")
     let jwt_issuer = std::env::var("JWT_ISSUER").unwrap_or_else(|_| "myapp".into());
@@ -50,6 +54,7 @@ pub async fn run() -> AppResult<()> {
         jwt_issuer,
         jwt_audience,
         access_token_ttl,
+        refresh_secret
     });
   
     // -----------------------
@@ -73,7 +78,7 @@ pub async fn run() -> AppResult<()> {
     axum::serve(listener, app)
         .with_graceful_shutdown(async {
             let _ = signal::ctrl_c().await;
-            eprintln!("App offline");
+            println!("App offline");
         })
         .await?;
 

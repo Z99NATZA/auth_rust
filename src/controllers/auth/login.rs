@@ -1,13 +1,15 @@
-use std::sync::Arc;
+use std::{net::IpAddr, sync::Arc};
 
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, extract::State, http::{HeaderMap, StatusCode, header}, response::{IntoResponse, Response}};
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use jsonwebtoken::{encode, Header, EncodingKey};
+use sqlx::types::ipnet::IpNet;
 use uuid::Uuid;
-
-use crate::app::{error::AppError, result::AppResult, state::AppState};
+use cookie::time::OffsetDateTime;
+use crate::{app::{error::AppError, result::AppResult, state::AppState}, controllers::auth::utils::{generate_refresh_token, hash_refresh_token}};
 
 #[derive(Debug, Deserialize)]
 pub struct LoginRequest {
@@ -30,15 +32,16 @@ pub struct Claims {
 
 #[derive(Debug, Serialize)]
 pub struct LoginResponse {
-    access_token: String,
-    token_type: String, // "Bearer"
-    expires_in: i64, // วินาที
+    pub access_token: String,
+    pub token_type: String, // "Bearer"
+    pub expires_in: i64, // วินาที
 }
 
 pub async fn login(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Json(payload): Json<LoginRequest>,
-) -> AppResult<(StatusCode, Json<LoginResponse>)> {
+) -> AppResult<Response> {
     let user = sqlx::query!(
         r#"
             SELECT 
@@ -101,9 +104,9 @@ pub async fn login(
         role: user.role,
         iat: now.timestamp() as usize,
         exp: exp.timestamp() as usize,
-        iss: state.jwt_issuer.clone(),           // ✅ เติมค่า
-        aud: state.jwt_audience.clone(),         // ✅ เติมค่า
-        jti: Uuid::new_v4().to_string(),         // ✅ สุ่มใหม่ทุกครั้ง
+        iss: state.jwt_issuer.clone(),
+        aud: state.jwt_audience.clone(),
+        jti: Uuid::new_v4().to_string(),
         token_version: user.token_version,
     };
 
@@ -113,11 +116,64 @@ pub async fn login(
         &EncodingKey::from_secret(&state.jwt_secret),
     )?;
 
-    let res = LoginResponse {
-        access_token: token,
-        token_type: "Bearer".into(),
-        expires_in: (exp - now).num_seconds(),
-    };
+    // ออก refresh token
+    let refresh_plain = generate_refresh_token()?;
+    let refresh_hash = hash_refresh_token(&refresh_plain, &state.refresh_secret)?;
     
-    Ok((StatusCode::OK, Json(res)))
+    // หมดอายุ 30 วัน
+    let refresh_exp = Utc::now() + Duration::days(30);
+
+    // refresh_exp = chrono::DateTime<Utc> ---> แปลงเป็น OffsetDateTime
+    let expires = OffsetDateTime::from_unix_timestamp(refresh_exp.timestamp())
+        .map_err(|e| AppError::InternalError(format!("valid timestamp: {:?}", e).into()))?;
+
+    // browser / app / library
+    let user_agent: Option<String> = headers
+        .get(header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+
+    // IP
+    let ip: Option<IpAddr> = Some("192.168.1.10".parse().unwrap());
+
+    // แปลงเป็น IpNet
+    let ip: Option<IpNet> = ip.map(IpNet::from);
+
+    sqlx::query!(
+        r#"
+            INSERT INTO refresh_tokens (user_id, token_hash, user_agent, ip, expires_at)
+            VALUES ($1, $2, $3, $4, $5)
+        "#,
+        user.id,
+        refresh_hash,
+        user_agent,
+        ip,
+        refresh_exp
+    )
+    .execute(&state.db)
+    .await?;
+
+    // สร้าง refresh cookie
+    // ตั้งค่าแบบ universal (ไม่พึ่ง builder API)
+    let mut refresh_cookie = Cookie::new("refresh_token", refresh_plain);
+    refresh_cookie.set_http_only(true);
+    refresh_cookie.set_secure(true);
+    refresh_cookie.set_same_site(SameSite::Lax); // หรือ Strict
+    refresh_cookie.set_path("/auth");
+    refresh_cookie.set_expires(expires);
+
+    // เตรียม response
+    let res = LoginResponse { 
+        access_token: token.clone(), 
+        token_type: "Bearer".into(), 
+        expires_in: (exp - now).num_seconds() 
+    };
+
+    let response = (
+        StatusCode::OK,
+        [(header::SET_COOKIE, refresh_cookie.to_string())],
+        Json(res),
+    ).into_response();
+
+    Ok(response)
 }

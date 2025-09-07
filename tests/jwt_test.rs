@@ -27,7 +27,7 @@ fn test_jwt_secret_encode_decode() {
         &EncodingKey::from_secret(jwt_secret.as_bytes()),
     ).expect("failed to encode");
 
-    eprintln!("Generated token: {}", token);
+    println!("Generated token: {}", token);
 
     // decode token กลับมา
     let data = decode::<Claims>(

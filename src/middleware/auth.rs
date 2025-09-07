@@ -6,14 +6,14 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use crate::app::{state::AppState, error::AppError};
+use crate::app::{result::AppResult, state::AppState};
 use crate::controllers::auth::me::AuthUser;
 
 pub async fn auth_mw(
     State(app): State<Arc<AppState>>,
     mut req: Request<Body>,
     next: Next,
-) -> Result<Response, AppError> {
+) -> AppResult<Response> {
     let (mut parts, body) = req.into_parts();
 
     let user = AuthUser::from_request_parts(&mut parts, &app).await?;

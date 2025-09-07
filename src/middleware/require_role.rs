@@ -4,7 +4,11 @@ use futures::future::BoxFuture;
 use crate::app::error::AppError;
 use crate::controllers::auth::me::AuthUser;
 
-/// สร้าง middleware checker สำหรับชุด role ที่อนุญาต
+/*
+|---------------------------------
+| สร้าง middleware checker สำหรับชุด role ที่อนุญาต
+|---------------------------------
+*/
 pub fn require_role(
     allowed: &'static [&'static str],
 ) -> impl Fn(Request<Body>, Next) -> BoxFuture<'static, Result<Response, AppError>> + Clone {

@@ -3,6 +3,7 @@ mod routers;
 mod server;
 mod controllers;
 mod middleware;
+mod utils;
 
 use crate::app::result::AppResult;
 

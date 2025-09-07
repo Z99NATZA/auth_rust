@@ -16,6 +16,9 @@ pub enum AppError {
     #[error("Dotenv loading error: {0}")]
     DotenvError(#[from] dotenv::Error),
 
+    #[error("Parse int error: {0}")]
+    ParseIntError(#[from] std::num::ParseIntError),
+
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
 
@@ -80,6 +83,7 @@ impl IntoResponse for AppError {
             // ที่เหลือถือเป็น internal ทั้งหมด
             AppError::EnvVarError(_)
             | AppError::DotenvError(_)
+            | AppError::ParseIntError(_)
             | AppError::IoError(_)
             | AppError::SqlxError(_)
             | AppError::Argon2Error(_)

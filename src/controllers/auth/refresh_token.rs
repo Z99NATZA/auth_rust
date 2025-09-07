@@ -5,7 +5,7 @@ use chrono::{Utc, Duration};
 use uuid::Uuid;
 use std::sync::Arc;
 use cookie::time::Duration as CookieDuration;
-use crate::{app::{error::AppError, result::AppResult, state::AppState}, controllers::auth::{login::{Claims, LoginResponse}, utils::{generate_refresh_token, hash_refresh_token}}};
+use crate::{app::{error::AppError, result::AppResult, state::AppState}, controllers::auth::{login::{Claims, LoginResponse}, utils::{generate_refresh_token, hash_refresh_token}}, utils::env::env_i64};
 
 pub async fn refresh(
     State(state): State<Arc<AppState>>,
@@ -65,7 +65,15 @@ pub async fn refresh(
 
     // ออก access token ใหม่
     let now = Utc::now();
-    let exp = now + Duration::hours(2);
+
+    // อ่านจาก ENV, ไม่มีก็ 15 นาที
+    let ttl_min = env_i64("ACCESS_TTL_MIN", 15)?;
+
+    // กันค่าพิสดารเล็กน้อย (เช่น ไม่ให้ติดลบ/ยาวเกิน)
+    let ttl_min = ttl_min.clamp(1, 120);
+    
+    let exp = now + chrono::Duration::minutes(ttl_min);
+
     let claims = Claims {
         sub: rec.user_id,
         username: rec.username,
@@ -102,7 +110,8 @@ pub async fn refresh(
     // เซ็ตคุกกี้ใหม่
     let mut refresh_cookie = cookie::Cookie::new("refresh_token", new_plain);
     refresh_cookie.set_http_only(true);
-    refresh_cookie.set_secure(true);
+    refresh_cookie.set_secure(false); // dev = false
+    // refresh_cookie.set_secure(true);
     refresh_cookie.set_same_site(cookie::SameSite::Lax);
     refresh_cookie.set_path("/auth");
     refresh_cookie.set_max_age(CookieDuration::days(30));

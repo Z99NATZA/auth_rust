@@ -9,7 +9,7 @@ use jsonwebtoken::{encode, Header, EncodingKey};
 use sqlx::types::ipnet::IpNet;
 use uuid::Uuid;
 use cookie::time::OffsetDateTime;
-use crate::{app::{error::AppError, result::AppResult, state::AppState}, controllers::auth::utils::{generate_refresh_token, hash_refresh_token}};
+use crate::{app::{error::AppError, result::AppResult, state::AppState}, controllers::auth::utils::{generate_refresh_token, hash_refresh_token}, utils::env::env_i64};
 
 #[derive(Debug, Deserialize)]
 pub struct LoginRequest {
@@ -96,7 +96,14 @@ pub async fn login(
     .await;
 
     let now = Utc::now();
-    let exp = now + Duration::hours(2);
+
+    // อ่านจาก ENV, ไม่มีก็ 15 นาที
+    let ttl_min = env_i64("ACCESS_TTL_MIN", 15)?;
+    
+    // กันค่าพิสดารเล็กน้อย (เช่น ไม่ให้ติดลบ/ยาวเกิน)
+    let ttl_min = ttl_min.clamp(1, 120);
+
+    let exp = now + chrono::Duration::minutes(ttl_min);
 
     let claims = Claims {
         sub: user.id,
@@ -157,7 +164,8 @@ pub async fn login(
     // ตั้งค่าแบบ universal (ไม่พึ่ง builder API)
     let mut refresh_cookie = Cookie::new("refresh_token", refresh_plain);
     refresh_cookie.set_http_only(true);
-    refresh_cookie.set_secure(true);
+    refresh_cookie.set_secure(false); // dev = false
+    // refresh_cookie.set_secure(true);
     refresh_cookie.set_same_site(SameSite::Lax); // หรือ Strict
     refresh_cookie.set_path("/auth");
     refresh_cookie.set_expires(expires);
